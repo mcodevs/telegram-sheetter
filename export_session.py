@@ -1,4 +1,4 @@
-"""Mavjud 'session.session' faylini StringSession matniga aylantiradi
+"""Mavjud  session.session faylini StringSession matniga aylantiradi
 va 'tg_session.txt' ga yozadi (Fly secret uchun). Qayta login shart emas.
 Ishlatish:  python export_session.py   (yoki: make session)"""
 import os
