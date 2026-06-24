@@ -1,0 +1,7 @@
+venv/
+.env
+creds.json
+*.session
+*.session-journal
+__pycache__/
+test_send.sh

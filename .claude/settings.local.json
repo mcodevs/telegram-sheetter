@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/mcodevs/my_projects/telegram-sheeter/venv/bin/python --version)",
+      "Bash(./venv/bin/python -m py_compile main.py)",
+      "Bash(cat)",
+      "Bash(./venv/bin/python /tmp/test_parse.py)"
+    ]
+  }
+}
