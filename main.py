@@ -12,6 +12,11 @@ load_dotenv()
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
 SOURCE = os.getenv("SOURCE")      # endi GURUH (bot xabar tashlaydigan), bot emas
+# Raqamli guruh ID (-100...) bo'lsa int ga o'tkazamiz; xato '@' bo'lsa ham tozalaymiz
+if SOURCE:
+    _s = SOURCE.lstrip("@")
+    if _s.lstrip("-").isdigit():
+        SOURCE = int(_s)
 BOT = os.getenv("BOT") or None    # guruhda xabar yozadigan bot — faqat shuning xabarlari olinadi
 SHEET_ID = os.getenv("SHEET_ID")
 
