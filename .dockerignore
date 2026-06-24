@@ -9,3 +9,5 @@ __pycache__/
 .DS_Store
 test_send.sh
 export_session.py
+tg_session.txt
+Makefile

@@ -5,3 +5,4 @@ creds.json
 *.session-journal
 __pycache__/
 test_send.sh
+tg_session.txt
