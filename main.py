@@ -89,6 +89,13 @@ _session = StringSession(os.getenv("TG_SESSION")) if os.getenv("TG_SESSION") els
 client = TelegramClient(_session, api_id, api_hash)
 
 
+def is_transaction(data):
+    """Xabar haqiqiy operatsiya shablonigami?
+    Reklama va boshqa formatdagi offtopic xabarlarni o'tkazib yuborish uchun.
+    Shart: yo'nalish (🔴/🟢) + summa (➖/➕) + karta (💳) — uchchalasi ham bo'lsin."""
+    return bool(data["yonalish"]) and data["summa"] != "" and bool(data["karta"])
+
+
 def build_row(data):
     """parse_message natijasini master jadval ustunlariga (A->J) joylaydi."""
     sana = data["sana"].split(" ")[0]  # faqat sana qismi: 2026-06-24
@@ -109,7 +116,12 @@ def build_row(data):
 @client.on(events.NewMessage(chats=SOURCE))
 async def handler(event):
     text = event.message.message
-    row = build_row(parse_message(text))
+    data = parse_message(text)
+    if not is_transaction(data):
+        snippet = " ".join(text.split())[:60]
+        print("O'tkazib yuborildi (shablonga mos emas):", snippet)
+        return
+    row = build_row(data)
     sheet.append_row(row, value_input_option="USER_ENTERED")
     print("Qo'shildi:", row)
 
