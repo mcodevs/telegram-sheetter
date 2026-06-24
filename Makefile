@@ -29,6 +29,7 @@ secrets: ## Fly secret'larini .env, creds.json va tg_session.txt dan o'rnatadi
 	  API_ID="$(API_ID)" \
 	  API_HASH="$(API_HASH)" \
 	  SOURCE="$(SOURCE)" \
+	  BOT="$(BOT)" \
 	  SHEET_ID="$(SHEET_ID)" \
 	  TG_SESSION="$$(cat tg_session.txt)" \
 	  GOOGLE_CREDS="$$(cat creds.json)"

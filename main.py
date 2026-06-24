@@ -11,7 +11,8 @@ load_dotenv()
 
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
-SOURCE = os.getenv("SOURCE")
+SOURCE = os.getenv("SOURCE")      # endi GURUH (bot xabar tashlaydigan), bot emas
+BOT = os.getenv("BOT") or None    # guruhda xabar yozadigan bot — faqat shuning xabarlari olinadi
 SHEET_ID = os.getenv("SHEET_ID")
 
 # Ustunlar master workbook'dagi "КУНЛИК ОПЕРАЦИЯЛАР КИРИТИШ БАЗАСИ" bilan bir xil (A->J)
@@ -113,7 +114,8 @@ def build_row(data):
     return [sana, "", "", "", "", prixod, tolov_p, rasxod, tolov_r, ""]
 
 
-@client.on(events.NewMessage(chats=SOURCE))
+# chats=SOURCE -> qaysi guruhni tinglash; from_users=BOT -> faqat o'sha botning xabarlari
+@client.on(events.NewMessage(chats=SOURCE, from_users=BOT))
 async def handler(event):
     text = event.message.message
     data = parse_message(text)
