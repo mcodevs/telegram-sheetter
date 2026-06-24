@@ -1,0 +1,11 @@
+venv/
+.venv/
+.env
+creds.json
+*.session
+*.session-journal
+__pycache__/
+.git/
+.DS_Store
+test_send.sh
+export_session.py

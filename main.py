@@ -1,6 +1,8 @@
 import os
 import re
+import json
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 import gspread
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
@@ -71,13 +73,20 @@ def parse_message(text):
 
 
 # Google Sheets ulanishi
+# Serverda creds.json fayl o'rniga GOOGLE_CREDS secret'idan (JSON matn) o'qiydi.
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_file("creds.json", scopes=scopes)
+_creds_env = os.getenv("GOOGLE_CREDS")
+if _creds_env:
+    creds = Credentials.from_service_account_info(json.loads(_creds_env), scopes=scopes)
+else:
+    creds = Credentials.from_service_account_file("creds.json", scopes=scopes)
 gc = gspread.authorize(creds)
 # 2-varaq (index 1) = "Нахд Приход&Расход" operatsiyalar bazasi
 sheet = gc.open_by_key(SHEET_ID).get_worksheet(1)
 
-client = TelegramClient("session", api_id, api_hash)
+# Serverda TG_SESSION secret'idan (matn sessiya) o'qiydi; lokalda esa "session" fayldan.
+_session = StringSession(os.getenv("TG_SESSION")) if os.getenv("TG_SESSION") else "session"
+client = TelegramClient(_session, api_id, api_hash)
 
 
 def build_row(data):

@@ -1,0 +1,20 @@
+# fly.toml app configuration file generated for telegram-sheeter on 2026-06-24T16:57:04+05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'telegram-sheeter'
+primary_region = 'fra'
+
+[build]
+
+# Bu bot web server EMAS — doimiy listener. Shuning uchun [http_service] yo'q
+# (aks holda Fly 8080-portda server kutadi va mashinani o'chirib qo'yadi).
+[processes]
+  app = 'python -u main.py'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+  cpus = 1
+  memory_mb = 512
