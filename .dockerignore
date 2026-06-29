@@ -11,3 +11,4 @@ test_send.sh
 export_session.py
 tg_session.txt
 Makefile
+pending_rows.jsonl

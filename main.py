@@ -1,13 +1,20 @@
 import os
 import re
 import json
+import asyncio
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import gspread
+from gspread.exceptions import APIError
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Sheets'ga yozib bo'lmagan qatorlar shu faylga saqlanadi va keyin qayta urinib ko'riladi.
+PENDING_FILE = os.getenv("PENDING_FILE", "pending_rows.jsonl")
+RETRY_INTERVAL = 600  # 10 daqiqa
+pending_lock = asyncio.Lock()
 
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
@@ -95,6 +102,72 @@ _session = StringSession(os.getenv("TG_SESSION")) if os.getenv("TG_SESSION") els
 client = TelegramClient(_session, api_id, api_hash)
 
 
+def try_append(row):
+    """Qatorni Sheets'ga yozadi. Muvaffaqiyatli bo'lsa True, xato bo'lsa False."""
+    try:
+        sheet.append_row(row, value_input_option="USER_ENTERED")
+        return True
+    except Exception as e:  # APIError (503/429/...) yoki tarmoq xatosi
+        print("Sheets append xatosi:", e)
+        return False
+
+
+def queue_row(row):
+    """Yozib bo'lmagan qatorni navbat fayliga (JSON-lines) qo'shadi."""
+    with open(PENDING_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def load_pending():
+    """Navbat faylidagi barcha qatorlarni o'qiydi. Fayl yo'q bo'lsa [] qaytaradi."""
+    if not os.path.exists(PENDING_FILE):
+        return []
+    rows = []
+    with open(PENDING_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+
+def rewrite_pending(rows):
+    """Navbat faylini qolgan qatorlar bilan qayta yozadi; bo'sh bo'lsa o'chiradi."""
+    if not rows:
+        if os.path.exists(PENDING_FILE):
+            os.remove(PENDING_FILE)
+        return
+    with open(PENDING_FILE, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+async def flush_pending():
+    """Navbatdagi qatorlarni Sheets'ga yozishga urinadi (kelish tartibida).
+    Birinchi xatoda to'xtaydi — Google hali ham yiqilgan bo'lishi mumkin."""
+    async with pending_lock:
+        rows = load_pending()
+        if not rows:
+            return
+        remaining = []
+        for i, r in enumerate(rows):
+            if not try_append(r):
+                remaining.extend(rows[i:])  # hali yiqilyapti — to'xtaymiz
+                break
+        rewrite_pending(remaining)
+        print(f"Navbat: {len(rows) - len(remaining)} yozildi, {len(remaining)} qoldi")
+
+
+async def retry_worker():
+    """Har 10 daqiqada navbatdagi qatorlarni qayta yozishga urinadi."""
+    while True:
+        await asyncio.sleep(RETRY_INTERVAL)
+        try:
+            await flush_pending()
+        except Exception as e:
+            print("retry_worker xatosi:", e)
+
+
 def is_transaction(data):
     """Xabar haqiqiy operatsiya shablonigami?
     Reklama va boshqa formatdagi offtopic xabarlarni o'tkazib yuborish uchun.
@@ -129,13 +202,20 @@ async def handler(event):
         print("O'tkazib yuborildi (shablonga mos emas):", snippet)
         return
     row = build_row(data)
-    sheet.append_row(row, value_input_option="USER_ENTERED")
-    print("Qo'shildi:", row)
+    if try_append(row):
+        print("Qo'shildi:", row)
+    else:
+        async with pending_lock:
+            queue_row(row)
+        print("Sheets xato — navbatga saqlandi:", row)
 
 
 def main():
     print("Ishga tushdi. Yangi xabarlar kutilmoqda...")
     client.start()
+    # Avvalgi ishlashdan qolgan navbatni darrov urinib ko'ramiz, keyin har 10 daqiqada.
+    client.loop.create_task(flush_pending())
+    client.loop.create_task(retry_worker())
     client.run_until_disconnected()
 
 
