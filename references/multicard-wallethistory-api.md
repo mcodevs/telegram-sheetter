@@ -59,3 +59,7 @@ MultiCard must never stop the Telegram bot or alter the existing message→sheet
 - Config ints parsed via `_int_env()` (fallback to default on bad value) — was a real bug: bad `MULTICARD_*` int crashed `import multicard` at startup and took the whole app down.
 - Existing flow untouched; only addition on the old path is `sheet_lock` around `try_append`.
 - Honest caveat: a hung gspread write held under `sheet_lock` could briefly STALL (not crash) the Telegram handler — pre-existing (no request timeout set); self-heals. Fix later if needed by adding a timeout to the gspread session.
+
+
+## Telegram flow has NO dedup — by design (verified 2026-07-07)
+The Telegram handler (main.py) writes ONE row per qualifying message; `is_transaction()` is a template filter (has direction+amount+card), NOT a dedup. Two identical messages (same amount/card/etc.) → TWO rows — intentional: identical real transactions must both be recorded. Do NOT add content/message-id dedup to the Telegram path — it would silently drop legitimate duplicate payments. (Same-message double-processing is prevented differently: Telethon fires NewMessage once, and `make scale count 1` keeps a single instance.) MultiCard's uuid/seen dedup is separate and never touches this path.
