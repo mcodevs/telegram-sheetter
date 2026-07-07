@@ -29,6 +29,15 @@ import datetime
 import requests
 
 # ---------- Sozlamalar (.env) ----------
+def _int_env(name, default):
+    """int(.env) — noto'g'ri qiymat bo'lsa import paytida yiqilmaslik uchun default'ga qaytadi."""
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        print(f"MultiCard: {name} noto'g'ri qiymat — {default} ishlatildi")
+        return default
+
+
 USERNAME = os.getenv("MULTICARD_USERNAME")
 PASSWORD = os.getenv("MULTICARD_PASSWORD")
 DOMAIN = os.getenv("MULTICARD_DOMAIN", "thenovacore")
@@ -39,12 +48,12 @@ LOGIN_URL = os.getenv("MULTICARD_LOGIN_URL", API + "/api/account/token")
 
 # credit = Пополнение, debit = Списание
 TYPES = [t.strip() for t in os.getenv("MULTICARD_TYPES", "credit,debit").split(",") if t.strip()]
-POLL_INTERVAL = int(os.getenv("MULTICARD_POLL_INTERVAL", "300"))   # soniya (default 5 daq)
-LOOKBACK_DAYS = int(os.getenv("MULTICARD_LOOKBACK_DAYS", "3"))     # har so'rovda nechа kun orqaga
-PAGE_SIZE = int(os.getenv("MULTICARD_PAGE_SIZE", "50"))            # sahifadagi yozuvlar soni
-MAX_PAGES = int(os.getenv("MULTICARD_MAX_PAGES", "20"))            # sahifalar chegarasi
+POLL_INTERVAL = _int_env("MULTICARD_POLL_INTERVAL", 300)   # soniya (default 5 daq)
+LOOKBACK_DAYS = _int_env("MULTICARD_LOOKBACK_DAYS", 3)      # har so'rovda nechа kun orqaga
+PAGE_SIZE = _int_env("MULTICARD_PAGE_SIZE", 50)            # sahifadagi yozuvlar soni
+MAX_PAGES = _int_env("MULTICARD_MAX_PAGES", 20)           # sahifalar chegarasi
 SEEN_FILE = os.getenv("MULTICARD_SEEN_FILE", "multicard_seen.json")
-SEEN_PRUNE_DAYS = int(os.getenv("MULTICARD_SEEN_PRUNE_DAYS", "30"))  # bundan eski uuid'lar tozalanadi
+SEEN_PRUNE_DAYS = _int_env("MULTICARD_SEEN_PRUNE_DAYS", 30)  # bundan eski uuid'lar tozalanadi
 
 TZ = datetime.timezone(datetime.timedelta(hours=5))  # Asia/Tashkent
 

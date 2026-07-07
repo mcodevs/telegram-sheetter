@@ -50,3 +50,12 @@ See [[fleet-api-transactions]], [[park-api-credentials]].
 
 ## Concurrency / write-conflict safety (2026-07-07)
 MultiCard writes run in a worker thread (`asyncio.to_thread`) while the Telegram handler writes in the event loop — both share ONE gspread client (`requests.Session`), which isn't thread-safe. Fixed with a `threading.Lock` (`sheet_lock` in main.py) wrapping BOTH `try_append` and `append_rows_batch`, so all sheet writes (handler, retry-queue, MultiCard) are strictly serialized. No corruption/overwrite (Sheets `append` is server-atomic, rows go to the end), no duplicates (uuid/synthetic-key dedup + seen file), no pending-file race (all `pending_rows.jsonl` access is in the event loop under `pending_lock`). Only cosmetic caveat: a Telegram row and a MultiCard row may interleave in physical row order — harmless (rows are dated in col A).
+
+
+## Isolation / non-crash guarantee (2026-07-07)
+MultiCard must never stop the Telegram bot or alter the existing message→sheet flow:
+- Poll cycle wrapped in `try/except`; asyncio task exceptions don't crash the loop.
+- `import multicard` AND worker-startup wrapped in `try/except` in main.py → module/config failure just disables MultiCard, bot keeps running (`multicard = None` guard).
+- Config ints parsed via `_int_env()` (fallback to default on bad value) — was a real bug: bad `MULTICARD_*` int crashed `import multicard` at startup and took the whole app down.
+- Existing flow untouched; only addition on the old path is `sheet_lock` around `try_append`.
+- Honest caveat: a hung gspread write held under `sheet_lock` could briefly STALL (not crash) the Telegram handler — pre-existing (no request timeout set); self-heals. Fix later if needed by adding a timeout to the gspread session.

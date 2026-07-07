@@ -12,7 +12,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import multicard  # MultiCard tranzaksiyalari (load_dotenv'dan keyin import qilinadi)
+try:
+    import multicard  # MultiCard tranzaksiyalari (load_dotenv'dan keyin import qilinadi)
+except Exception as _e:  # modul xatosi Telegram botni to'xtatmasin
+    print("MultiCard moduli import qilinmadi — o'chirildi:", _e)
+    multicard = None
 
 # Sheets'ga yozib bo'lmagan qatorlar shu faylga saqlanadi va keyin qayta urinib ko'riladi.
 PENDING_FILE = os.getenv("PENDING_FILE", "pending_rows.jsonl")
@@ -235,10 +239,14 @@ def main():
     client.loop.create_task(flush_pending())
     client.loop.create_task(retry_worker())
     # MultiCard tranzaksiyalari (sozlangan bo'lsa) — fon vazifasi.
-    if multicard.enabled():
-        client.loop.create_task(multicard.worker(append_rows_batch, queue_row, pending_lock))
-    else:
-        print("MultiCard o'chiq (MULTICARD_USERNAME/PASSWORD .env'da yo'q).")
+    # Xatolik bo'lsa ham Telegram bot ishlashda davom etadi.
+    try:
+        if multicard and multicard.enabled():
+            client.loop.create_task(multicard.worker(append_rows_batch, queue_row, pending_lock))
+        else:
+            print("MultiCard o'chiq (MULTICARD_USERNAME/PASSWORD .env'da yo'q).")
+    except Exception as e:
+        print("MultiCard ishga tushmadi (Telegram bot davom etadi):", e)
     client.run_until_disconnected()
 
 
