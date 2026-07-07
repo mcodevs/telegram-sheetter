@@ -1,0 +1,2 @@
+- [Park API credentials](references/park-api-credentials.md) — Yandex Fleet park creds in .env (PARK_CLID/PARK_API_KEY/PARK_ID), not yet used by code
+- [Fleet API transactions](references/fleet-api-transactions.md) — how to pull park transactions via Fleet API (endpoints + header auth mapping)

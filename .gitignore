@@ -7,3 +7,4 @@ __pycache__/
 test_send.sh
 tg_session.txt
 pending_rows.jsonl
+park_credentials.jpg
