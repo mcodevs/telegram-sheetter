@@ -2,6 +2,7 @@ import os
 import re
 import json
 import asyncio
+import threading
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import gspread
@@ -17,6 +18,9 @@ import multicard  # MultiCard tranzaksiyalari (load_dotenv'dan keyin import qili
 PENDING_FILE = os.getenv("PENDING_FILE", "pending_rows.jsonl")
 RETRY_INTERVAL = 600  # 10 daqiqa
 pending_lock = asyncio.Lock()
+# Sheets'ga yozishni serializatsiya qiladi: handler (event loop) va MultiCard worker
+# (asyncio.to_thread — alohida thread) bir vaqtda gspread client'ni ishlatmasligi uchun.
+sheet_lock = threading.Lock()
 
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
@@ -107,7 +111,8 @@ client = TelegramClient(_session, api_id, api_hash)
 def try_append(row):
     """Qatorni Sheets'ga yozadi. Muvaffaqiyatli bo'lsa True, xato bo'lsa False."""
     try:
-        sheet.append_row(row, value_input_option="USER_ENTERED")
+        with sheet_lock:
+            sheet.append_row(row, value_input_option="USER_ENTERED")
         return True
     except Exception as e:  # APIError (503/429/...) yoki tarmoq xatosi
         print("Sheets append xatosi:", e)
@@ -117,7 +122,8 @@ def try_append(row):
 def append_rows_batch(rows):
     """Bir nechta qatorni bitta so'rovda Sheets'ga yozadi. Xato bo'lsa False."""
     try:
-        sheet.append_rows(rows, value_input_option="USER_ENTERED")
+        with sheet_lock:
+            sheet.append_rows(rows, value_input_option="USER_ENTERED")
         return True
     except Exception as e:
         print("Sheets batch append xatosi:", e)

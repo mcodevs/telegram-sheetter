@@ -46,3 +46,7 @@ Row = `[date, "", "", info, "", Приход, ТўловП, Расход, Тўл
 The `Dockerfile` COPYs source files individually (`COPY main.py .`), NOT `COPY . .` — so **every new module must be added explicitly**. Adding `multicard.py` required `COPY multicard.py .` or the deploy crashes with `ModuleNotFoundError: multicard`. Deploy via `make ship` (session → secrets → deploy → scale 1). MULTICARD_* are NEW secrets, so `make secrets` (bundled in ship) is required — plain `fly deploy` leaves MultiCard disabled on the server. First run logs `MultiCard: baseline — N ... (yozilmadi)`.
 
 See [[fleet-api-transactions]], [[park-api-credentials]].
+
+
+## Concurrency / write-conflict safety (2026-07-07)
+MultiCard writes run in a worker thread (`asyncio.to_thread`) while the Telegram handler writes in the event loop — both share ONE gspread client (`requests.Session`), which isn't thread-safe. Fixed with a `threading.Lock` (`sheet_lock` in main.py) wrapping BOTH `try_append` and `append_rows_batch`, so all sheet writes (handler, retry-queue, MultiCard) are strictly serialized. No corruption/overwrite (Sheets `append` is server-atomic, rows go to the end), no duplicates (uuid/synthetic-key dedup + seen file), no pending-file race (all `pending_rows.jsonl` access is in the event loop under `pending_lock`). Only cosmetic caveat: a Telegram row and a MultiCard row may interleave in physical row order — harmless (rows are dated in col A).
