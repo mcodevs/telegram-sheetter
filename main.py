@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import multicard  # MultiCard tranzaksiyalari (load_dotenv'dan keyin import qilinadi)
+
 # Sheets'ga yozib bo'lmagan qatorlar shu faylga saqlanadi va keyin qayta urinib ko'riladi.
 PENDING_FILE = os.getenv("PENDING_FILE", "pending_rows.jsonl")
 RETRY_INTERVAL = 600  # 10 daqiqa
@@ -109,6 +111,16 @@ def try_append(row):
         return True
     except Exception as e:  # APIError (503/429/...) yoki tarmoq xatosi
         print("Sheets append xatosi:", e)
+        return False
+
+
+def append_rows_batch(rows):
+    """Bir nechta qatorni bitta so'rovda Sheets'ga yozadi. Xato bo'lsa False."""
+    try:
+        sheet.append_rows(rows, value_input_option="USER_ENTERED")
+        return True
+    except Exception as e:
+        print("Sheets batch append xatosi:", e)
         return False
 
 
@@ -216,6 +228,11 @@ def main():
     # Avvalgi ishlashdan qolgan navbatni darrov urinib ko'ramiz, keyin har 10 daqiqada.
     client.loop.create_task(flush_pending())
     client.loop.create_task(retry_worker())
+    # MultiCard tranzaksiyalari (sozlangan bo'lsa) — fon vazifasi.
+    if multicard.enabled():
+        client.loop.create_task(multicard.worker(append_rows_batch, queue_row, pending_lock))
+    else:
+        print("MultiCard o'chiq (MULTICARD_USERNAME/PASSWORD .env'da yo'q).")
     client.run_until_disconnected()
 
 

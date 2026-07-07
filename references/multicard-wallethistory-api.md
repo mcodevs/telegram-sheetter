@@ -1,39 +1,48 @@
 ---
 name: multicard-wallethistory-api
-description: MultiCard/MultiAvto (novacore) WalletHistory API — second tx source, tiyin units, JWT auth, login flow
+description: MultiCard/MultiAvto (novacore) WalletHistory API — 2nd tx source, login, tiyin units, sheet integration (WORKING)
 metadata:
   type: reference
 ---
 
-A **second, separate** transaction source alongside [[fleet-api-transactions]]. This is the MultiCard / MultiAvto "novacore" deposit-wallet acquiring system — NOT Yandex Fleet. Distinct money flow: per card-payment debits from the fleet's wallet, not the Yandex ride-level ledger. Frontend is a **Blazor WebAssembly** app (`YandexDriverPartner.Client`).
+A **second, separate** transaction source alongside [[fleet-api-transactions]]. This is the MultiCard / MultiAvto "novacore" deposit-wallet acquiring system — NOT Yandex Fleet. Per card-payment debits + deposit top-ups from the fleet's wallet. Frontend is a **Blazor WebAssembly** app (`YandexDriverPartner.Client`); appsettings.json has `serverUrl=https://api.multiavto.uz/`, `adminApiUrl=https://adminapi.multiavto.uz/`.
 
-## Hosts (from wwwroot/appsettings.json)
-- `serverUrl` = `https://api.multiavto.uz/` — main API (data)
-- `adminApiUrl` = `https://adminapi.multiavto.uz/` — admin API (**login**)
-
-## Login (discovered 2026-07-07)
-`POST https://adminapi.multiavto.uz/api/Auth/login`
-- Body: `{"UserName": "...", "Password": "...", "Domain": "thenovacore"}` (plaintext password, NO client-side hashing).
-- Headers: `Origin`/`Referer` = `https://thenovacore.multiavto.uz` (backend derives tenant from these).
-- Returns a JWT bearer token. Token TTL ~2h (`exp - nbf = 7200s`); cache + re-login on expiry.
-- Errors seen: missing field → 400 `{errors:{UserName:[...]}}`; bad pw → 200-ish body `"Password is wrong"`.
-- The `admin` / `_X@OOGN8uE8a` creds given by user were REJECTED by the server ("Password is wrong") though UserName resolved — password needs re-verification (likely O/0 transcription).
+## Login (CORRECT endpoint, verified working 2026-07-07)
+`POST https://api.multiavto.uz/api/account/token`  (on serverUrl, NOT adminapi)
+- Body: `{"Login": "admin", "Password": "...", "Domain": "thenovacore", "ConfirmCode": null, "RememberMe": false}` — field is **`Login`** (not `UserName`), plaintext password.
+- Headers: `Origin`/`Referer` = `https://thenovacore.multiavto.uz`, and `Authorization: Bearer` (empty) as the frontend sends.
+- Response: `{"isSuccess":true,"data":{"token":"<JWT>"},...}` → token at `data.token`. TTL ~2h; cache + re-login on expiry/401.
+- ⚠️ Dead end that cost time: `adminapi/api/Auth/login` with `{UserName,...}` exists too but returns `"Password is wrong"` for these creds — DIFFERENT auth path. Use `api/account/token`.
 
 ## Data endpoints (namespace `api/multicard/*` on serverUrl)
-- `POST api/multicard/WalletHistory?from=DDMMYY&to=DDMMYY&page=N&type=debit|credit` (Bearer) — `type=debit`=Списание, `type=credit`=Пополнение.
-- Also present: `api/multicard/GetDebitList`, `api/multicard/Wallets`, `api/multicard/Balance`, `api/multicard/GetPartnerTransactions`, `api/multicard/GetClearingHistory`.
+`GET api/multicard/WalletHistory?from=DDMMYY&to=DDMMYY&page=N&type=debit|credit` (Bearer)
+- `type=debit` = Списание; `type=credit` = Пополнение. Server returns credit data for ANY type != "debit".
+- Others: `GetDebitList`, `Wallets`, `Balance`, `GetPartnerTransactions`, `GetClearingHistory`.
 
-**Units gotcha (why amounts look "wrong"):** MIXED units within one record:
-- `paymentAmount`, `commissionAmount` → **tiyin** (÷100 for so'm)
-- `amountValue`, `balance` → **so'm** already
+**Units gotcha:** MIXED units per record — `paymentAmount`,`commissionAmount` → **tiyin** (÷100); `amountValue`,`balance` → **so'm**. `amountValue = paymentAmount/100 + commissionAmount/100`; commission = 0.9% of payment.
 
-Verified relationships (50-row `type=debit` page, 2026-07-07): `amountValue = paymentAmount/100 + commissionAmount/100` held on **50/50**; commission = 0.9% of payment on 49/50 (one row rounded UP by 1 tiyin). Balance chain reconciles only across debit+credit merged by date — `type=debit` alone hides top-ups.
+**Dedup key gotcha:** debit rows have `uuid`; **credit (Пополнение) rows have `uuid: null`** (deposit top-ups: no card, no commission, `note` = "00634П/О, ПОПОЛНЕНИЕ ОБЕСПЕЧИТЕЛЬНОГО ДЕПОЗИТА ПО ДОГОВОРУ №DRV-... (№NNN, ...)"). Dedup = `uuid` for debit, else md5 of `type|date|amountValue|balance|note`.
 
-`type=credit` (Пополнение) rows are deposit top-ups ("ПОПОЛНЕНИЕ ОБЕСПЕЧИТЕЛЬНОГО ДЕПОЗИТА ПО ДОГОВОРУ №DRV-..."): no card, no commission, `Наша система: Нет`.
+Response row keys: `number, date, amountValue, note, balance, uuid, storeId, status, cardPan, paymentAmount, commissionAmount, commissionType, isCommissionUp, isOurTransaction`.
 
-Response shape: `{ isSuccess, message, data:[{ number, date, amountValue, note, balance, uuid, storeId, status, cardPan, paymentAmount, commissionAmount, commissionType, isCommissionUp, isOurTransaction }], total, appVersion }`. Dedup key = `uuid`.
+**Not reconcilable 1:1 with Yandex Fleet** — no shared join key. Two independent datasets.
 
-**Not reconcilable 1:1 with Yandex Fleet.** No shared join key: MultiCard rows carry `cardPan`/`uuid`/`storeId`; Yandex rows carry `order_id`/`driver_profile_id`. They measure complementary flows, not the same events. Treat as two independent datasets.
+## Integration status — DONE & VERIFIED (2026-07-07)
+`multicard.py` + wired into `main.py`. End-to-end tested (login + fetch both types + dedup stable + row mapping); NOT yet writing to the live sheet (baseline-first-run prevents dumping history).
+- `multicard.worker(append_rows_batch, queue_row, pending_lock)` = asyncio bg task beside the Telethon listener; blocking calls via `asyncio.to_thread`.
+- Config `.env` MULTICARD_* (USERNAME/PASSWORD/DOMAIN; opt POLL_INTERVAL=300, LOOKBACK_DAYS=3, TYPES=credit,debit). `enabled()` gates on user+pw.
+- Decision (user): BOTH types into **existing worksheet index 1** — credit→Приход, debit→Расход — via `build_row()` (A–J layout). Only NEW tx (dedup in `multicard_seen.json`). **First run = baseline** (mark existing seen, write nothing); only genuinely new appended after. Seen-file ephemeral on Fly → each redeploy re-baselines.
+- Deploy: MULTICARD_* in Makefile `secrets`; `multicard_seen.json` gitignored.
+- Test w/o writing: `.venv/bin/python multicard.py test`.
 
-## Integration goal (project)
-Extend telegram-sheeter (currently: Telethon parses bot msgs → Google Sheet) to ALSO pull MultiCard transactions into the sheet. Needs: login+token-cache+refresh, paginate WalletHistory (debit+credit), dedup by `uuid`, map to sheet. See [[fleet-api-transactions]] and [[park-api-credentials]].
+## Row mapping (build_row)
+Row = `[date, "", "", info, "", Приход, ТўловП, Расход, ТўловР, izoh]` (A–J).
+- `info` (col D): `MultiCard пополнение` / `MultiCard списание`.
+- amount = `amountValue` (already so'm); credit→Приход(F), debit→Расход(H).
+- **Тўлов тури column (G/I): always the literal `Мультисард`** for BOTH kirim & chiqim — NO card number. (User decision 2026-07-07: "Karta yozuv bo'lmasin, ikkalasida ham Мультисард." Note: user insisted on this exact spelling `Мультисард` with `с`, NOT the brand-correct `Мультикард` — do not "fix" it. Superseded the earlier `Карта (LAST4)` scheme.)
+- `izoh` (col J): datetime + note.
+
+## Deploy gotcha (Fly.io)
+The `Dockerfile` COPYs source files individually (`COPY main.py .`), NOT `COPY . .` — so **every new module must be added explicitly**. Adding `multicard.py` required `COPY multicard.py .` or the deploy crashes with `ModuleNotFoundError: multicard`. Deploy via `make ship` (session → secrets → deploy → scale 1). MULTICARD_* are NEW secrets, so `make secrets` (bundled in ship) is required — plain `fly deploy` leaves MultiCard disabled on the server. First run logs `MultiCard: baseline — N ... (yozilmadi)`.
+
+See [[fleet-api-transactions]], [[park-api-credentials]].

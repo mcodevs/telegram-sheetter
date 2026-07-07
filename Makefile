@@ -31,6 +31,9 @@ secrets: ## Fly secret'larini .env, creds.json va tg_session.txt dan o'rnatadi
 	  SOURCE="$(SOURCE)" \
 	  BOT="$(BOT)" \
 	  SHEET_ID="$(SHEET_ID)" \
+	  MULTICARD_USERNAME="$(MULTICARD_USERNAME)" \
+	  MULTICARD_PASSWORD="$(MULTICARD_PASSWORD)" \
+	  MULTICARD_DOMAIN="$(MULTICARD_DOMAIN)" \
 	  TG_SESSION="$$(cat tg_session.txt)" \
 	  GOOGLE_CREDS="$$(cat creds.json)"
 
