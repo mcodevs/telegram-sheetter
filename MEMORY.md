@@ -1,2 +1,3 @@
 - [Park API credentials](references/park-api-credentials.md) — Yandex Fleet park creds in .env (PARK_CLID/PARK_API_KEY/PARK_ID), not yet used by code
-- [Fleet API transactions](references/fleet-api-transactions.md) — how to pull park transactions via Fleet API (endpoints + header auth mapping)
+- [Fleet API transactions](references/fleet-api-transactions.md) — how to pull park transactions via Yandex Fleet API (endpoints + header auth mapping, verified schema)
+- [MultiCard WalletHistory API](references/multicard-wallethistory-api.md) — 2nd tx source (multiavto.uz), tiyin units, JWT auth, amountValue = payment + 0.9% commission
