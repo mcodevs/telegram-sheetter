@@ -1,6 +1,8 @@
 ---
 name: multicard-wallethistory-api
-description: MultiCard/MultiAvto (novacore) WalletHistory API — 2nd tx source, login, tiyin units, sheet integration (WORKING)
+description: "MultiCard/MultiAvto (novacore) WalletHistory API — 2nd tx source,
+  login, tiyin units, sheet integration. RUNTIME BLOCKED (2026-07-09):
+  geo-restricted to UZ IPs (Fly deploy gets 403 HTML). Creds confirmed correct."
 metadata:
   type: reference
 ---
@@ -63,3 +65,14 @@ MultiCard must never stop the Telegram bot or alter the existing message→sheet
 
 ## Telegram flow has NO dedup — by design (verified 2026-07-07)
 The Telegram handler (main.py) writes ONE row per qualifying message; `is_transaction()` is a template filter (has direction+amount+card), NOT a dedup. Two identical messages (same amount/card/etc.) → TWO rows — intentional: identical real transactions must both be recorded. Do NOT add content/message-id dedup to the Telegram path — it would silently drop legitimate duplicate payments. (Same-message double-processing is prevented differently: Telethon fires NewMessage once, and `make scale count 1` keeps a single instance.) MultiCard's uuid/seen dedup is separate and never touches this path.
+
+## ⚠️ RUNTIME BLOCKED — geo-IP only (diagnosed 2026-07-09; creds OK)
+Despite the "verified working 2026-07-07" claims above, the live integration has **never once worked from the Fly.io deployment**. The worker crashes every poll with `InvalidHeader('... Bearer <!DOCTYPE html> ...')`. Root cause is a SINGLE external blocker:
+
+**Geo/IP block.** `POST /api/account/token` returns **403 + an HTML "Доступ ограничен / kirish cheklangan" page** (not JSON) to any non-Uzbek IP. Proven by an identical single-request A/B test: UZ IP `185.139.138.128` (Uzbektelecom, Tashkent) → **200 `application/json` + JWT**; Fly `fra` machine egress `152.236.9.6` (geolocates outside UZ) → **403 `text/html`**. A single request is blocked ⇒ it is IP-based, NOT rate-limiting. Fly has no UZ region. Fix options: route MultiCard traffic through a UZ IP/proxy, host the bot on a UZ VPS, or ask MultiCard (@Multidriver_support01) to whitelist the egress IP.
+
+**Credentials are CORRECT** (`Login=admin`, `Password=_X@OOGN8uE8a`, `Domain=thenovacore`). Confirmed 2026-07-09 by the user's `curl` AND by Python `requests` from the UZ IP — both return `{isSuccess:true, data:{token}}`, including with the empty `Authorization: Bearer` header the code uses. An earlier "creds rejected" reading was a **test-harness artifact**: diagnostic scripts in the scratchpad dir called argument-less `load_dotenv()`, which searches upward from the *script's* directory (not cwd), found no `.env`, and sent `Login=None/Password=None` → the API correctly answered "wrong username/password". The real app (`main.py`, in the project dir) loads `.env` fine. (When fixing the geo-block, just re-confirm the Fly secret carries the exact password.)
+
+**Why the crash presents as `InvalidHeader`:** `_extract_token()` accepts the HTML block page as a "token" (it only checks `.count('.')>=2 and len>60`), `_login()` caches it ~90 min (`_jwt_exp` can't parse it → `now+5400`), then `_headers()` builds `Authorization: Bearer <entire-HTML>` and urllib3 rejects the newline-laden header. `_login()` never checks HTTP status / content-type (unlike `_fetch_page` which calls `raise_for_status()`). **Hardening TODO:** in `_login()`, reject non-2xx or non-JSON / HTML responses with a clear "MultiCard: IP blocked or bad creds" error instead of caching garbage → confusing downstream crash.
+
+See [[park-api-credentials]].

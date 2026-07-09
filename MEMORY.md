@@ -1,3 +1,3 @@
 - [Park API credentials](references/park-api-credentials.md) — Yandex Fleet park creds in .env (PARK_CLID/PARK_API_KEY/PARK_ID), not yet used by code
 - [Fleet API transactions](references/fleet-api-transactions.md) — how to pull park transactions via Yandex Fleet API (endpoints + header auth mapping, verified schema)
-- [MultiCard WalletHistory API](references/multicard-wallethistory-api.md) — 2nd tx source (multiavto.uz): login/data endpoints, tiyin units, and the multicard.py→sheet integration (built, blocked on password)
+- [MultiCard WalletHistory API](references/multicard-wallethistory-api.md) — 2nd tx source (multiavto.uz): login/data endpoints, tiyin units, multicard.py→sheet integration. RUNTIME BLOCKED (2026-07-09): geo-restricted to UZ IPs (Fly deploy → 403 HTML block). Creds confirmed correct.
