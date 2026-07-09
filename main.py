@@ -2,7 +2,6 @@ import os
 import re
 import json
 import asyncio
-import threading
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import gspread
@@ -12,19 +11,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-try:
-    import multicard  # MultiCard tranzaksiyalari (load_dotenv'dan keyin import qilinadi)
-except Exception as _e:  # modul xatosi Telegram botni to'xtatmasin
-    print("MultiCard moduli import qilinmadi — o'chirildi:", _e)
-    multicard = None
-
 # Sheets'ga yozib bo'lmagan qatorlar shu faylga saqlanadi va keyin qayta urinib ko'riladi.
 PENDING_FILE = os.getenv("PENDING_FILE", "pending_rows.jsonl")
 RETRY_INTERVAL = 600  # 10 daqiqa
 pending_lock = asyncio.Lock()
-# Sheets'ga yozishni serializatsiya qiladi: handler (event loop) va MultiCard worker
-# (asyncio.to_thread — alohida thread) bir vaqtda gspread client'ni ishlatmasligi uchun.
-sheet_lock = threading.Lock()
 
 api_id = int(os.getenv("API_ID"))
 api_hash = os.getenv("API_HASH")
@@ -115,22 +105,10 @@ client = TelegramClient(_session, api_id, api_hash)
 def try_append(row):
     """Qatorni Sheets'ga yozadi. Muvaffaqiyatli bo'lsa True, xato bo'lsa False."""
     try:
-        with sheet_lock:
-            sheet.append_row(row, value_input_option="USER_ENTERED")
+        sheet.append_row(row, value_input_option="USER_ENTERED")
         return True
     except Exception as e:  # APIError (503/429/...) yoki tarmoq xatosi
         print("Sheets append xatosi:", e)
-        return False
-
-
-def append_rows_batch(rows):
-    """Bir nechta qatorni bitta so'rovda Sheets'ga yozadi. Xato bo'lsa False."""
-    try:
-        with sheet_lock:
-            sheet.append_rows(rows, value_input_option="USER_ENTERED")
-        return True
-    except Exception as e:
-        print("Sheets batch append xatosi:", e)
         return False
 
 
@@ -238,15 +216,6 @@ def main():
     # Avvalgi ishlashdan qolgan navbatni darrov urinib ko'ramiz, keyin har 10 daqiqada.
     client.loop.create_task(flush_pending())
     client.loop.create_task(retry_worker())
-    # MultiCard tranzaksiyalari (sozlangan bo'lsa) — fon vazifasi.
-    # Xatolik bo'lsa ham Telegram bot ishlashda davom etadi.
-    try:
-        if multicard and multicard.enabled():
-            client.loop.create_task(multicard.worker(append_rows_batch, queue_row, pending_lock))
-        else:
-            print("MultiCard o'chiq (MULTICARD_USERNAME/PASSWORD .env'da yo'q).")
-    except Exception as e:
-        print("MultiCard ishga tushmadi (Telegram bot davom etadi):", e)
     client.run_until_disconnected()
 
 

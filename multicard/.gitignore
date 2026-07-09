@@ -1,0 +1,17 @@
+# Sirlar / creds
+.env
+creds.json
+
+# Ish holati
+multicard_seen.json
+pending_rows.jsonl
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# PyInstaller (.exe) build chiqindilari
+build/
+dist/
+*.spec

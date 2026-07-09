@@ -1,0 +1,7 @@
+# MultiCard logikasi uchun (multicard.py)
+requests==2.32.5
+python-dotenv==1.2.1
+
+# Keyingi qadam — Google Sheet'ga yozadigan desktop driver uchun
+gspread==6.2.1
+google-auth==2.50.0

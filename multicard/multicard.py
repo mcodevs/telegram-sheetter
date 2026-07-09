@@ -1,6 +1,7 @@
 """MultiCard / MultiAvto (novacore) tranzaksiyalarini olib, mavjud Google Sheet'ga
-yozadigan modul. main.py'dagi Telegram listener yonida fon vazifasi (worker) sifatida
-ishlaydi.
+yozadigan MUSTAQIL modul — asosiy Telegram botdan (telegram-sheeter/main.py) to'liq
+ajratilgan, O'zbekiston mashinasida alohida ishlaydi. Sheet'ga yozish funksiyasi
+(append_rows_batch) tashqi driver tomonidan worker()'ga uzatiladi.
 
 Oqim:
   1. adminapi.multiavto.uz/api/Auth/login orqali JWT token olinadi (~2 soat yashaydi,
