@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MultiCardSync.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="MultiCardSync.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="780" Height="600" MinWidth="640" MinHeight="480"
+        Title="MultiCard → Sheet Sync">
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="18">
+
+    <!-- Header: holat nuqtasi + nom + holat matni -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+      <Ellipse Width="14" Height="14" Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
+      <TextBlock Text="MultiCard → Sheet Sync" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+      <Border Background="#22808080" CornerRadius="10" Padding="10,3" Margin="8,0,0,0" VerticalAlignment="Center">
+        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}" VerticalAlignment="Center" />
+      </Border>
+    </StackPanel>
+
+    <!-- Statistika + boshqaruv -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,18,0,12">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="28">
+        <StackPanel>
+          <TextBlock Text="Jami yozilgan" Opacity="0.6" FontSize="12" />
+          <TextBlock Text="{Binding TotalSynced}" FontSize="24" FontWeight="Bold" />
+        </StackPanel>
+        <StackPanel>
+          <TextBlock Text="Oxirgi sinxron" Opacity="0.6" FontSize="12" />
+          <TextBlock Text="{Binding LastSyncText}" FontSize="16" Margin="0,4,0,0" />
+        </StackPanel>
+        <StackPanel>
+          <TextBlock Text="Davr" Opacity="0.6" FontSize="12" />
+          <TextBlock Text="{Binding PollIntervalText}" FontSize="16" Margin="0,4,0,0" />
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Content="🔄 Hozir sinxronla" Command="{Binding SyncNowCommand}" />
+        <Button Content="{Binding ToggleButtonText}" Command="{Binding ToggleCommand}" />
+        <Button Content="📊 Sheet" Command="{Binding OpenSheetCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Sinxronlangan tranzaksiyalar jadvali -->
+    <Border Grid.Row="2" BorderBrush="#33808080" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+      <DataGrid ItemsSource="{Binding Transactions}"
+                x:CompileBindings="False"
+                AutoGenerateColumns="False"
+                IsReadOnly="True"
+                GridLinesVisibility="Horizontal"
+                HeadersVisibility="Column"
+                CanUserResizeColumns="True"
+                CanUserSortColumns="False">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Sana" Binding="{Binding Date}" Width="105" />
+          <DataGridTextColumn Header="Yo'nalish" Binding="{Binding Direction}" Width="95" />
+          <DataGridTextColumn Header="Summa" Binding="{Binding Amount}" Width="120" />
+          <DataGridTextColumn Header="Izoh" Binding="{Binding Note}" Width="*" />
+          <DataGridTextColumn Header="Holat" Binding="{Binding Status}" Width="110" />
+          <DataGridTextColumn Header="Sinxron" Binding="{Binding SyncedAt}" Width="105" />
+        </DataGrid.Columns>
+      </DataGrid>
+    </Border>
+
+    <!-- Footer: startup checkbox -->
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="16" Margin="0,12,0,0" VerticalAlignment="Center">
+      <CheckBox Content="Windows startup'da avtomatik ishga tushsin"
+                IsChecked="{Binding StartupRegistered, Mode=OneWay}"
+                Command="{Binding ToggleStartupCommand}"
+                IsEnabled="{Binding StartupSupported}" />
+      <TextBlock Text="Kompyuter yoqilganda ilova o'zi ishga tushadi va sheetni sinxronlaydi."
+                 Opacity="0.55" FontSize="12" VerticalAlignment="Center" />
+    </StackPanel>
+
+  </Grid>
+</Window>

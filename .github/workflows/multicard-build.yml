@@ -1,0 +1,78 @@
+name: MultiCard Sync — Windows .exe
+
+# Faqat multicard/ o'zgarganda ishlaydi (Telegram bot deploy'iga tegmaydi).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'multicard/**'
+      - '.github/workflows/multicard-build.yml'
+    tags: ['mc-v*']
+  pull_request:
+    paths:
+      - 'multicard/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: multicard
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Sirlarni (parol, sheet id, Google creds) appsettings.Secrets.json ga yozamiz.
+      # Bu fayl EmbeddedResource sifatida exe ichiga kiradi — alohida config fayli kerak emas.
+      - name: Sirlarni yozish
+        shell: pwsh
+        run: |
+          $obj = [ordered]@{
+            MultiCard   = [ordered]@{ Password = $env:MC_PASSWORD }
+            GoogleSheet = [ordered]@{ SpreadsheetId = $env:MC_SHEET_ID; CredentialsJson = $env:MC_GOOGLE_CREDS }
+          }
+          $obj | ConvertTo-Json -Depth 8 | Set-Content -Path src/App/appsettings.Secrets.json -Encoding UTF8
+          Write-Host "appsettings.Secrets.json yozildi."
+        env:
+          MC_PASSWORD: ${{ secrets.MULTICARD_PASSWORD }}
+          MC_SHEET_ID: ${{ secrets.MULTICARD_SHEET_ID }}
+          MC_GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: dotnet test --no-build -c Release --verbosity normal
+
+      - name: Publish (bitta self-contained .exe)
+        run: >
+          dotnet publish src/App/App.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish
+
+      - name: Artifact yuklash
+        uses: actions/upload-artifact@v4
+        with:
+          name: multicardsync-win-x64
+          path: multicard/publish/*.exe
+          retention-days: 30
+
+      - name: Release (mc-v* teg qo'yilganda)
+        if: startsWith(github.ref, 'refs/tags/mc-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: multicard/publish/*.exe

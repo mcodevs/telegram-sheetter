@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>MultiCardSync.App</RootNamespace>
+    <AssemblyName>MultiCardSync</AssemblyName>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationIcon></ApplicationIcon>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- UI (Avalonia 11.3 — 12 hali chiqmagan) -->
+    <PackageReference Include="Avalonia" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.*" />
+    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.*" Condition="'$(Configuration)'=='Debug'" />
+
+    <!-- MVVM -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
+
+    <!-- DI + konfiguratsiya -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.*" />
+
+    <!-- Log -->
+    <PackageReference Include="Serilog" Version="4.*" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.*" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.*" />
+
+    <!-- Windows startup registratsiyasi (macOS'da no-op) -->
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Core/Core.csproj" />
+    <ProjectReference Include="../Data/Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Config exe ICHIGA (embedded resource) joylanadi → bitta self-contained .exe.
+         appsettings.Secrets.json CI'da GitHub Secrets'dan yasaladi (multicard-build.yml). -->
+    <None Remove="appsettings.json" />
+    <None Remove="appsettings.Secrets.json" />
+    <None Remove="appsettings.Secrets.sample.json" />
+    <EmbeddedResource Include="appsettings.json" />
+    <EmbeddedResource Include="appsettings.Secrets.json" Condition="Exists('appsettings.Secrets.json')" />
+  </ItemGroup>
+
+</Project>

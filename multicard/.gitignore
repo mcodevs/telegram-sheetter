@@ -1,17 +1,31 @@
-# Sirlar / creds
-.env
+# ---- .NET ----
+bin/
+obj/
+publish/
+*.user
+*.suo
+
+# IDE
+.idea/
+.vs/
+.vscode/
+
+# ---- Sirlar (hech qachon commit qilinmaydi) ----
+# Real qiymatlar CI'da GitHub Secrets orqali quyiladi (multicard-build.yml).
+appsettings.Secrets.json
+src/App/appsettings.Secrets.json
 creds.json
+src/App/creds.json
+.env
 
-# Ish holati
-multicard_seen.json
-pending_rows.jsonl
+# ---- Lokal holat / log ----
 *.log
+logs/
+multicard_seen.json
+*.db
+*.db-shm
+*.db-wal
 
-# Python
-__pycache__/
-*.pyc
-
-# PyInstaller (.exe) build chiqindilari
-build/
-dist/
-*.spec
+# ---- Python reference ----
+reference/.venv/
+reference/__pycache__/

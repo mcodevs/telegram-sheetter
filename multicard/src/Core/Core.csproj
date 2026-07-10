@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>MultiCardSync.Core</RootNamespace>
+    <AssemblyName>MultiCardSync.Core</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Core — sof biznes logika. UI (Avalonia) yoki infratuzilmaga HECH QACHON
+       bog'lanmaydi. Faqat BCL: System.Text.Json + System.Security.Cryptography. -->
+
+</Project>
