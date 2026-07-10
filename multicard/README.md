@@ -18,6 +18,25 @@ To'liq tashxis: [`../references/multicard-wallethistory-api.md`](../references/m
    (`MaxLookbackDays`gacha) qamrab oladi — dedup tufayli hech narsa yo'qolmaydi/takrorlanmaydi.
 7. Birinchi ishga tushish = **baseline** (mavjud tarix "ko'rilgan" deb belgilanadi, yozilmaydi).
 
+## Qo'lda oqim va oynadagi tablar
+Avtomatik halqadan tashqari, oyna quyidagilarni beradi:
+
+- **⬇️ Tortib olish** — MultiCard'dagi joriy tranzaksiyalarni oladi (sheetга **yozmaydi**),
+  "Tortib olingan" tabida ko'rsatadi. Har satr **🆕 Yangi** yoki **• Sinxronlangan**.
+- **Har qatordagi 📤 Yozish tugmasi** — bosilganda faqat **shu bitta yozuvni** Google Sheet'ga
+  yozadi, ko'rilgan deb belgilaydi va holatni **✅ Yozildi** ga o'zgartiradi (tugma o'chadi).
+  Idempotent: allaqachon sheetда bo'lgan yozuv qayta yozilmaydi. Baseline-xavfsizlik: baseline
+  hali o'rnatilmagan bo'lsa (birinchi ishga tushish), yozuv yoziladi-yu, lekin `lastSync`
+  ilgarilamaydi — shunda fon halqasi qolgan mavjud tarixni sheetга to'kib yubormaydi.
+- **📜 Log** tabi — ilovaning jonli logi (Serilog fayl loglarining aynan o'zi; eng yangisi tepada).
+- **🔄 Hozir sinxronla** — bir siklni (olish + yozish) darrov bajaradi (avvalgidek).
+
+### Sheet ustunlariga eslatma
+`RowBuilder` MultiCard tranzaksiyasini master jadval ustunlariga (A→J) joylaydi.
+Hisobchi so'roviga ko'ra **Инфо (D)** va **Изоҳ (J)** ustunlariga hech narsa yozilmaydi
+(credit ham, debit ham) — ya'ni "MultiCard пополнение/списание" yorlig'i va uzun izoh matni
+sheetга tushmaydi. Summa/yo'nalish (Приход/Расход) va to'lov turi (Мультисард) yoziladi.
+
 ## Texnologiya
 C# 14 / .NET 10 · Avalonia UI 12 (MVVM) · SQLite (Dapper) · Google Sheets API · Serilog.
 Stack tafsiloti: `../` dagi PROJECT_CONTEXT hujjati. Struktura:

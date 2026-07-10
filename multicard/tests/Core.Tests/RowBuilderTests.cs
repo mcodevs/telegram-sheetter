@@ -15,11 +15,11 @@ public class RowBuilderTests
         var row = RowBuilder.Build(tx, "credit");
 
         row.Length.ShouldBe(10);
-        row[0].ShouldBe("2026-07-09");           // Сана
-        row[3].ShouldBe("MultiCard пополнение");  // Инфо
-        row[5].ShouldBe(2000000m);                // Приход (F)
-        row[6].ShouldBe("Мультисард");            // Тўлов Приход (G)
-        row[7].ShouldBe("");                       // Расход bo'sh
+        row[0].ShouldBe("2026-07-09");   // Сана
+        row[3].ShouldBe("");              // Инфо — bo'sh (yozilmaydi)
+        row[5].ShouldBe(2000000m);        // Приход (F)
+        row[6].ShouldBe("Мультисард");    // Тўлов Приход (G)
+        row[7].ShouldBe("");              // Расход bo'sh
     }
 
     [Fact]
@@ -35,12 +35,17 @@ public class RowBuilderTests
     }
 
     [Fact]
-    public void Note_is_appended_to_izoh_with_datetime()
+    public void Info_and_izoh_columns_are_left_empty()
     {
         var tx = new MultiCardTransaction { Date = "2026-07-09T16:00:16", AmountValue = 1m, Note = "  test  " };
 
-        var row = RowBuilder.Build(tx, "credit");
+        var credit = RowBuilder.Build(tx, "credit");
+        var debit = RowBuilder.Build(tx, "debit");
 
-        ((string)row[9]!).ShouldBe("2026-07-09 16:00:16 · test");
+        // Инфо (D) va Изоҳ (J) — credit ham, debit ham bo'sh.
+        credit[3].ShouldBe("");
+        credit[9].ShouldBe("");
+        debit[3].ShouldBe("");
+        debit[9].ShouldBe("");
     }
 }

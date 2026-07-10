@@ -3,6 +3,13 @@ namespace MultiCardSync.Core.Models;
 /// <summary>Ko'rilmagan (yangi) tranzaksiya — dedup kaliti + turi + xom yozuv.</summary>
 public sealed record NewTransaction(string Key, string Type, MultiCardTransaction Tx);
 
+/// <summary>
+/// UI "tortib olish" (preview) satri — joriy oynadan olingan xom tranzaksiya.
+/// <see cref="IsNew"/> = hali sheetga yozilmagan (yozish tugmasi shularni yozadi);
+/// aks holda allaqachon sinxronlangan (faqat ko'rsatish uchun).
+/// </summary>
+public sealed record PreviewTransaction(string Key, string Type, MultiCardTransaction Tx, bool IsNew);
+
 /// <summary>Sinxronlangan tranzaksiyaning holati.</summary>
 public enum SyncItemStatus
 {

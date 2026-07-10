@@ -61,6 +61,7 @@ internal static class Program
                 Path.Combine(appData, "logs", "multicardsync-.log"),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14)
+            .WriteTo.Sink(UiLogSink.Instance) // ilova ichidagi "Log" paneli
             .CreateLogger();
 
         var services = new ServiceCollection();
