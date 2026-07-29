@@ -9,3 +9,4 @@ tg_session.txt
 pending_rows.jsonl
 park_credentials.jpg
 multicard_seen.json
+.DS_Store
