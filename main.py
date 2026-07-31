@@ -27,9 +27,21 @@ if SOURCE:
 BOT = os.getenv("BOT") or None    # guruhda xabar yozadigan bot — faqat shuning xabarlari olinadi
 SHEET_ID = os.getenv("SHEET_ID")
 
-# Ustunlar master workbook'dagi "КУНЛИК ОПЕРАЦИЯЛАР КИРИТИШ БАЗАСИ" bilan bir xil (A->J)
+# Yoziladigan varaq NOMI. Ilgari varaq indeks bo'yicha olinardi (get_worksheet(1)) —
+# hisobchi varaqlar tartibini o'zgartirgach, index 1 "Инфо" ma'lumotnomasiga tushib
+# qoldi va yozuvlar noto'g'ri varaqqa ketdi (2026-07-28). Nom bo'yicha topish shu
+# turdagi buzilishni butunlay yopadi: varaq topilmasa — ilova darrov xato beradi.
+SHEET_TAB = os.getenv("SHEET_TAB") or "Нахд Приход&Расход"
+
+# Ma'lumot jadvali "Сана" sarlavhasidan boshlanadi. Sarlavha qatori raqami qat'iy
+# yozilmaydi — ustidagi hisobot bloki o'sishi mumkin, shuning uchun ishga tushganda
+# topiladi (pastdagi resolve_table_range).
+HEADER_ANCHOR = "Сана"
+
+# Ustunlar master workbook'dagi "КУНЛИК ОПЕРАЦИЯЛАР КИРИТИШ БАЗАСИ" bilan bir xil.
+# YANGI SHABLON (2026-07): jadval A emas, B ustunidan boshlanadi (B->K), A bo'sh.
 HEADER = [
-    "Сана", "Фирма / Филиал", "", "Инфо", "Статья расход",
+    "Сана", "Фирма / Филиал", "Марка", "Инфо", "Статья расход",
     "Приход", "Тўлов тури Приход", "Расход", "Тўлов тури Расход", "Изоҳ (Комент)",
 ]
 
@@ -94,8 +106,41 @@ if _creds_env:
 else:
     creds = Credentials.from_service_account_file("creds.json", scopes=scopes)
 gc = gspread.authorize(creds)
-# 2-varaq (index 1) = "Нахд Приход&Расход" operatsiyalar bazasi
-sheet = gc.open_by_key(SHEET_ID).get_worksheet(1)
+
+
+def open_sheet():
+    """Operatsiyalar varag'ini NOM bo'yicha ochadi (indeks bo'yicha EMAS)."""
+    book = gc.open_by_key(SHEET_ID)
+    try:
+        return book.worksheet(SHEET_TAB)
+    except gspread.WorksheetNotFound:
+        mavjud = ", ".join(w.title for w in book.worksheets())
+        raise SystemExit(
+            f"'{SHEET_TAB}' varag'i topilmadi. Mavjud varaqlar: {mavjud}\n"
+            f"To'g'ri nomni SHEET_TAB muhit o'zgaruvchisiga yozing."
+        )
+
+
+def resolve_table_range(ws):
+    """Qatorlar qo'shiladigan diapazon: 'B<sarlavha qatori>:K'.
+
+    Sheets API append'i diapazondagi jadvalni topib, uning oxiriga yozadi. Diapazonni
+    aniq ko'rsatmasak, API jadvalni o'zi taxmin qiladi — varaq tepasidagi hisobot
+    bloki tufayli bu ishonchsiz. Sarlavha ("Сана") qatorini topib, aniq bog'laymiz.
+    """
+    col_b = ws.col_values(2)
+    for i, value in enumerate(col_b, start=1):
+        if str(value).strip() == HEADER_ANCHOR:
+            return f"B{i}:K"
+    raise SystemExit(
+        f"'{SHEET_TAB}' varag'ining B ustunida '{HEADER_ANCHOR}' sarlavhasi topilmadi — "
+        f"jadval strukturasi yana o'zgargan bo'lishi mumkin."
+    )
+
+
+sheet = open_sheet()
+TABLE_RANGE = resolve_table_range(sheet)
+print(f"Varaq: '{sheet.title}' · jadval diapazoni: {TABLE_RANGE}")
 
 # Serverda TG_SESSION secret'idan (matn sessiya) o'qiydi; lokalda esa "session" fayldan.
 _session = StringSession(os.getenv("TG_SESSION")) if os.getenv("TG_SESSION") else "session"
@@ -105,7 +150,7 @@ client = TelegramClient(_session, api_id, api_hash)
 def try_append(row):
     """Qatorni Sheets'ga yozadi. Muvaffaqiyatli bo'lsa True, xato bo'lsa False."""
     try:
-        sheet.append_row(row, value_input_option="USER_ENTERED")
+        sheet.append_row(row, value_input_option="USER_ENTERED", table_range=TABLE_RANGE)
         return True
     except Exception as e:  # APIError (503/429/...) yoki tarmoq xatosi
         print("Sheets append xatosi:", e)
@@ -176,7 +221,7 @@ def is_transaction(data):
 
 
 def build_row(data):
-    """parse_message natijasini master jadval ustunlariga (A->J) joylaydi."""
+    """parse_message natijasini master jadval ustunlariga (B->K) joylaydi."""
     sana = data["sana"].split(" ")[0]  # faqat sana qismi: 2026-06-24
     last4 = re.sub(r"\D", "", data["karta"])[-4:]
     tolov = f"Карта ({last4})" if last4 else ""
@@ -188,7 +233,8 @@ def build_row(data):
     elif data["yonalish"] == "chiqim":
         rasxod, tolov_r = summa, tolov
 
-    # Сана | Фирма/Филиал | (филиал) | Инфо | Статья | Приход | Тўлов Приход | Расход | Тўлов Расход | Изоҳ
+    #  B     C              D      E      F        G        H             I        J             K
+    # Сана | Фирма/Филиал | Марка | Инфо | Статья | Приход | Тўлов Приход | Расход | Тўлов Расход | Изоҳ
     return [sana, "", "", "", "", prixod, tolov_p, rasxod, tolov_r, ""]
 
 

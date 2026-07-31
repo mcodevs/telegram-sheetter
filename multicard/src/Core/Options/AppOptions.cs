@@ -24,7 +24,18 @@ public sealed class GoogleSheetOptions
 {
     public string SpreadsheetId { get; set; } = "";
 
-    /// <summary>0-indeksli varaq raqami. Python versiyada 2-varaq = index 1.</summary>
+    /// <summary>
+    /// Yoziladigan varaq NOMI. Ilgari varaq indeks bo'yicha olinardi — hisobchi
+    /// varaqlar tartibini o'zgartirgach (2026-07-28), index 1 "Инфо" ma'lumotnomasiga
+    /// tushib qoldi va tranzaksiyalar noto'g'ri varaqqa yozildi. Nom bo'yicha topish
+    /// shu turdagi buzilishni yopadi: varaq topilmasa — aniq xato beriladi.
+    /// </summary>
+    public string WorksheetTitle { get; set; } = "Нахд Приход&Расход";
+
+    /// <summary>
+    /// ESKI usul: 0-indeksli varaq raqami. Faqat <see cref="WorksheetTitle"/> ataylab
+    /// bo'sh qoldirilganda ishlatiladi (moslik uchun). Yangi sozlamalarda ishlatmang.
+    /// </summary>
     public int WorksheetIndex { get; set; } = 1;
 
     /// <summary>Service-account JSON fayli (exe yonida). Alternativa: CredentialsJson.</summary>

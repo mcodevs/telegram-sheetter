@@ -3,8 +3,10 @@ using MultiCardSync.Core.Models;
 namespace MultiCardSync.Core.Logic;
 
 /// <summary>
-/// MultiCard tranzaksiyasini master jadval ustunlariga (A→J) joylaydi.
+/// MultiCard tranzaksiyasini master jadval ustunlariga (B→K) joylaydi.
 /// credit → Приход, debit → Расход. (multicard.py'dagi build_row porti.)
+/// 2026-07 shablonida jadval A emas, B ustunidan boshlanadi — qaysi ustunga
+/// tushishini <see cref="TableAnchor"/> belgilaydi.
 /// </summary>
 public static class RowBuilder
 {
@@ -20,8 +22,9 @@ public static class RowBuilder
         if (type == "credit") { prixod = amount; tolovP = PayMethod; }
         else { rasxod = amount; tolovR = PayMethod; }
 
-        // Сана | Фирма/Филиал | (филиал) | Инфо | Статья | Приход | Тўлов Приход | Расход | Тўлов Расход | Изоҳ
-        // Инфо (D) va Изоҳ (J) — hisobchi so'roviga ko'ra bo'sh qoldiriladi
+        //  B     C              D       E      F        G        H              I        J              K
+        // Сана | Фирма/Филиал | Марка | Инфо | Статья | Приход | Тўлов Приход | Расход | Тўлов Расход | Изоҳ
+        // Инфо (E) va Изоҳ (K) — hisobchi so'roviga ko'ra bo'sh qoldiriladi
         // (credit ham, debit ham): "MultiCard пополнение/списание" yorlig'i va uzun
         // izoh matni sheetга yozilmaydi.
         return [date, "", "", "", "", prixod, tolovP, rasxod, tolovR, ""];

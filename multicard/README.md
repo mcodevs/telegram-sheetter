@@ -32,7 +32,11 @@ Avtomatik halqadan tashqari, oyna quyidagilarni beradi:
 - **🔄 Hozir sinxronla** — bir siklni (olish + yozish) darrov bajaradi (avvalgidek).
 
 ### Sheet ustunlariga eslatma
-`RowBuilder` MultiCard tranzaksiyasini master jadval ustunlariga (A→J) joylaydi.
+`RowBuilder` MultiCard tranzaksiyasini master jadval ustunlariga (**B→K**) joylaydi.
+2026-07 shablonida jadval A emas, **B ustunidan** boshlanadi va sarlavha 20-qatorda
+(tepasida hisobot bloki). Ilova varaqni **nomi** bo'yicha topadi va sarlavha ("Сана")
+qatorini o'zi aniqlab, `B<qator>:K` diapazoniga yozadi — shu sababli varaqlar tartibi
+yoki tepadagi blok o'zgarsa ham qatorlar to'g'ri joyga tushadi.
 Hisobchi so'roviga ko'ra **Инфо (D)** va **Изоҳ (J)** ustunlariga hech narsa yozilmaydi
 (credit ham, debit ham) — ya'ni "MultiCard пополнение/списание" yorlig'i va uzun izoh matni
 sheetга tushmaydi. Summa/yo'nalish (Приход/Расход) va to'lov turi (Мультисард) yoziladi.
@@ -99,7 +103,7 @@ dotnet run --project src/App
 | Sync | LookbackDays | 14 | har so'rovda necha kun orqaga |
 | Sync | MaxLookbackDays | 90 | o'chiq davr uchun yuqori chegara |
 | Sync | RegisterStartup | true | startup'ga qo'shish |
-| GoogleSheet | WorksheetIndex | 1 | 2-varaq |
+| GoogleSheet | WorksheetTitle | Нахд Приход&Расход | yoziladigan varaq **nomi** (indeks EMAS) |
 | GoogleSheet | WriteHeartbeat | true | "oxirgi sinxron" belgisi (L1) |
 
 Sirlar (Password, SpreadsheetId, CredentialsJson) — `appsettings.Secrets.json` orqali.
