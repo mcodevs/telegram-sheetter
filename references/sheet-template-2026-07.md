@@ -63,10 +63,17 @@ Same two changes in both writers, plus verification:
 - **Append range anchored to the header, not hard-coded.** Both resolve the header row at startup by scanning column B for `"Сана"` and build `B<row>:K` (currently `B20:K`). The row number is never hard-coded — the summary block above the table can grow and the range follows it. Python: `resolve_table_range()` + `append_row(..., table_range=TABLE_RANGE)`. C#: `Core/Logic/TableAnchor` (pure, unit-tested) + `GoogleSheetWriter.ResolveAppendRangeAsync`; the old `'{sheet}'!A:J` range is gone.
 - **Verified, not assumed.** A throwaway tab in the live workbook (created and deleted in the same run, existing tabs untouched) proved gspread `append_row` with `table_range="B20:K"` lands at `B23:K23`/`B24:K24` — right after the last data row, starting at column B, column A untouched, Приход→G/H and Расход→I/J. A read-only C# probe against the live workbook resolved the same `'Нахд Приход&Расход'!B20:K`. Core tests 17/17 (6 new in `TableAnchorTests`, including "header moves when the summary block grows").
 
+Committed as `165e590`. **The push was blocked by the permission classifier — the user pushes `main` themselves**, which is what triggers both the Fly redeploy and the new `.exe` build.
+
+## Cleanup + data recovery (user decided 2026-07-31: Claude does NOT touch the sheet)
+The junk in `Инфо` spans **rows 216–233, columns I..R — 75 cells**. Two selections:
+`L216:R216` (⚠️ **leave `I216`/`J216` alone** — real mapping data for `Зарплата`) and `I217:R233` (all foreign).
+
+**The 17 mis-written transactions will NOT come back on their own** — the app's local SQLite already has them marked seen/Written, so dedup skips them after the fix. Cross-checked against the ops sheet: **1 of 17 is already recorded manually** (30.07 Расход 10 090 000 at ops row 1565, part of a Мультисард→Карта(4962) Перемешение); the other **16 are genuinely missing** (Приход 55 000 000 · Расход 42 971 023, spanning 2026-07-28 22:15 → 2026-07-31 13:45). A B→K-shaped CSV of those 16 was handed to the user for manual entry. Alternative if hand-entry is unwanted: delete just those keys from `%APPDATA%\MultiCardSync\multicardsync.db` `seen` table — **never the whole DB**, since an empty DB makes `IsFirstRunAsync` true and the next cycle baselines (writes nothing) instead.
+
 **Still open (needs the user/accountant, not code):**
-1. The 17 junk rows in `Инфо` (rows 216–232, cols I..R) are NOT cleaned up — row 216 overlaps a real mapping row, so it is not a plain row-delete.
-2. The accountant's `.exe` must be rebuilt and re-distributed; until then their old build keeps writing to `Инфо`. Stop the app on their PC first.
-3. What should the writers put in `E` (Инфо) / `F` (Статья расход) so rows get classified into Cash Flow / ПНЛ? Still empty → `M` shows `#N/A`.
-4. `Карта (<last4>)` values outside the validated list (2804 / 9321 / 0420) would still fall out of the dashboard SUMIFS.
+1. Stop the app on the accountant's PC — the old build keeps appending to `Инфо` (last seen 2026-07-31 13:45) until the new `.exe` replaces it.
+2. What should the writers put in `E` (Инфо) / `F` (Статья расход) so rows get classified into Cash Flow / ПНЛ? Still empty → `M` shows `#N/A`.
+3. `Карта (<last4>)` values outside the validated list (2804 / 9321 / 0420) would still fall out of the dashboard SUMIFS.
 
 Supersedes the "Row mapping (build_row)" A→J layout in [[multicard-wallethistory-api]]. See [[park-api-credentials]], [[fleet-api-transactions]].
