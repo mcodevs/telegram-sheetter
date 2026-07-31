@@ -63,7 +63,15 @@ Same two changes in both writers, plus verification:
 - **Append range anchored to the header, not hard-coded.** Both resolve the header row at startup by scanning column B for `"Сана"` and build `B<row>:K` (currently `B20:K`). The row number is never hard-coded — the summary block above the table can grow and the range follows it. Python: `resolve_table_range()` + `append_row(..., table_range=TABLE_RANGE)`. C#: `Core/Logic/TableAnchor` (pure, unit-tested) + `GoogleSheetWriter.ResolveAppendRangeAsync`; the old `'{sheet}'!A:J` range is gone.
 - **Verified, not assumed.** A throwaway tab in the live workbook (created and deleted in the same run, existing tabs untouched) proved gspread `append_row` with `table_range="B20:K"` lands at `B23:K23`/`B24:K24` — right after the last data row, starting at column B, column A untouched, Приход→G/H and Расход→I/J. A read-only C# probe against the live workbook resolved the same `'Нахд Приход&Расход'!B20:K`. Core tests 17/17 (6 new in `TableAnchorTests`, including "header moves when the summary block grows").
 
-Committed as `165e590`. **The push was blocked by the permission classifier — the user pushes `main` themselves**, which is what triggers both the Fly redeploy and the new `.exe` build.
+Committed as `165e590` + `205741f`, pushed 2026-07-31 09:35Z; both workflows green (Fly Deploy 55s, MultiCard `.exe` 1m34s).
+
+**Confirmed live on Fly** — the deploy restarted the bot (machine version 46) and it logged
+`Varaq: 'Нахд Приход&Расход' · jadval diapazoni: B20:K`. That restart is exactly the event that would have silently rebound the bot to `Инфо` without the fix, so the ticking-bomb is defused.
+
+**Ongoing health checks** (use these instead of re-deriving the diagnosis):
+- Fly bot: `fly logs --no-tail` must show the `Varaq: … B20:K` line at startup. A wrong tab is now a `SystemExit` listing the available tabs, so the machine crash-loops loudly instead of writing to the wrong sheet.
+- Desktop app: the 📜 Log tab must show `Sheet tayyor: '…' (nom bo'yicha)` and `Jadval diapazoni: B20:K`.
+- Simplest ongoing signal: `Нахд Приход&Расход`!L1 "Oxirgi sinxron" must keep advancing. It froze at `2026-07-28 21:58` for the entire outage — that single cell was the earliest visible symptom and nobody noticed for 3 days.
 
 ## Cleanup + data recovery (user decided 2026-07-31: Claude does NOT touch the sheet)
 The junk in `Инфо` spans **rows 216–233, columns I..R — 75 cells**. Two selections:
